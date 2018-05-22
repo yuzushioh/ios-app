@@ -30,9 +30,8 @@ final class MessageDAO {
         UPDATE conversations SET unseen_message_count = (SELECT count(m.id) FROM messages m, users u WHERE m.user_id = u.user_id AND u.relationship != 'ME' AND m.status = 'DELIVERED' AND conversation_id = old.conversation_id) where conversation_id = old.conversation_id;
     END
     """
-    private static let sqlQueryLastNMessages = """
-        SELECT * FROM (
-        SELECT m.id, m.conversation_id, m.user_id, m.category, m.content, m.media_url, m.media_mime_type,
+    private static let sqlQueryMessageItem = """
+    SELECT m.id, m.conversation_id, m.user_id, m.category, m.content, m.media_url, m.media_mime_type,
         m.media_size, m.media_duration, m.media_width, m.media_height, m.media_hash, m.media_key,
         m.media_digest, m.media_status, m.thumb_image, m.status, m.participant_id, m.snapshot_id, m.name,
         m.album_id, m.created_at,
@@ -41,39 +40,24 @@ final class MessageDAO {
         s.amount as snapshotAmount, s.asset_id as snapshotAssetId, s.type as snapshotType,
         a.symbol as assetSymbol, a.icon_url as assetIcon,
         st.asset_width as assetWidth, st.asset_height as assetHeight, st.asset_url as assetUrl, m.action as actionName, m.shared_user_id as sharedUserId,
-        su.full_name as sharedUserFullName, su.identity_number as sharedUserIdentityNumber, su.avatar_url as sharedUserAvatarUrl, su.app_id as sharedUserAppId, su.is_verified as sharedUserIsVerified
-                       FROM messages m
-                       LEFT JOIN users u ON m.user_id = u.user_id
-                       LEFT JOIN users u1 ON m.participant_id = u1.user_id
-                       LEFT JOIN snapshots s ON m.snapshot_id = s.snapshot_id
-                       LEFT JOIN assets a ON s.asset_id = a.asset_id
-                       LEFT JOIN stickers st ON m.album_id = st.album_id AND m.name = st.name
-                       LEFT JOIN users su ON m.shared_user_id = su.user_id
-                       WHERE m.conversation_id = ?
-                       ORDER BY m.created_at DESC
-                       LIMIT ?)
-        ORDER BY created_at ASC
+        su.full_name as sharedUserFullName, su.identity_number as sharedUserIdentityNumber, su.avatar_url as sharedUserAvatarUrl, su.app_id as sharedUserAppId, su.is_verified as sharedUserIsVerified, m.quote_message_id, m.quote_content 
+    FROM messages m
+    LEFT JOIN users u ON m.user_id = u.user_id
+    LEFT JOIN users u1 ON m.participant_id = u1.user_id
+    LEFT JOIN snapshots s ON m.snapshot_id = s.snapshot_id
+    LEFT JOIN assets a ON s.asset_id = a.asset_id
+    LEFT JOIN stickers st ON m.album_id = st.album_id AND m.name = st.name
+    LEFT JOIN users su ON m.shared_user_id = su.user_id
     """
-    private static let sqlQueryMessagesByOffset = """
-        SELECT m.id, m.conversation_id, m.user_id, m.category, m.content, m.media_url, m.media_mime_type,
-        m.media_size, m.media_duration, m.media_width, m.media_height, m.media_hash, m.media_key,
-        m.media_digest, m.media_status, m.thumb_image, m.status, m.participant_id, m.snapshot_id, m.name,
-        m.album_id, m.created_at, u.full_name as userFullName, u.identity_number as userIdentityNumber, u.app_id as appId,
-               u1.full_name as participantFullName, u1.user_id as participantUserId,
-               s.amount as snapshotAmount, s.asset_id as snapshotAssetId, s.type as snapshotType, a.symbol as assetSymbol, a.icon_url as assetIcon,
-               st.asset_width as assetWidth, st.asset_height as assetHeight, st.asset_url as assetUrl, m.action as actionName, m.shared_user_id as sharedUserId, su.full_name as sharedUserFullName, su.identity_number as sharedUserIdentityNumber, su.avatar_url as sharedUserAvatarUrl, su.app_id as sharedUserAppId, su.is_verified as sharedUserIsVerified
-        FROM messages m
-        LEFT JOIN users u ON m.user_id = u.user_id
-        LEFT JOIN users u1 ON m.participant_id = u1.user_id
-        LEFT JOIN snapshots s ON m.snapshot_id = s.snapshot_id
-        LEFT JOIN assets a ON s.asset_id = a.asset_id
-        LEFT JOIN stickers st ON m.album_id = st.album_id AND m.name = st.name
-        LEFT JOIN users su ON m.shared_user_id = su.user_id
-        WHERE m.conversation_id = ?
-        ORDER BY m.created_at ASC
-        LIMIT ?
-        OFFSET ?
+    private static let sqlQueryMessage = """
+    SELECT m.id, m.conversation_id, m.user_id, m.category, m.content, m.media_url, m.media_mime_type,
+    m.media_size, m.media_duration, m.media_width, m.media_height, m.media_hash, m.media_key,
+    m.media_digest, m.media_status, m.thumb_image, m.status, m.participant_id, m.snapshot_id, m.name,
+    m.album_id, m.quote_message_id, m.quote_content, m.created_at FROM messages m
+    INNER JOIN conversations c ON c.conversation_id = m.conversation_id AND c.status = 1
     """
+    private static let sqlQueryLastNMessages = "SELECT * FROM (\(sqlQueryMessageItem) WHERE m.conversation_id = ? ORDER BY m.created_at DESC LIMIT ?) ORDER BY created_at ASC"
+    private static let sqlQueryMessagesByOffset = "\(sqlQueryMessageItem) WHERE m.conversation_id = ? ORDER BY m.created_at ASC LIMIT ? OFFSET ?"
     private static let sqlQueryOffsetByCreatedAt = """
         SELECT COUNT(id)
         FROM messages
@@ -90,41 +74,10 @@ final class MessageDAO {
         UPDATE messages SET status = 'READ'
         WHERE conversation_id = ? AND status == 'DELIVERED' AND user_id != ? AND created_at <= ?
     """
-    static let sqlQueryFullMessageById = """
-    SELECT m.id, m.conversation_id, m.user_id, m.category, m.content, m.media_url, m.media_mime_type,
-        m.media_size, m.media_duration, m.media_width, m.media_height, m.media_hash, m.media_key,
-        m.media_digest, m.media_status, m.thumb_image, m.status, m.participant_id, m.snapshot_id, m.name,
-        m.album_id, m.created_at, u.full_name as userFullName, u.identity_number as userIdentityNumber, u.app_id as appId,
-               u1.full_name as participantFullName, u1.user_id as participantUserId,
-               s.amount as snapshotAmount, s.asset_id as snapshotAssetId, s.type as snapshotType, a.symbol as assetSymbol, a.icon_url as assetIcon,
-               st.asset_width as assetWidth, st.asset_height as assetHeight, st.asset_url as assetUrl, m.action as actionName, m.shared_user_id as sharedUserId, su.full_name as sharedUserFullName, su.identity_number as sharedUserIdentityNumber, su.avatar_url as sharedUserAvatarUrl, su.app_id as sharedUserAppId, su.is_verified as sharedUserIsVerified
-    FROM messages m
-    LEFT JOIN users u ON m.user_id = u.user_id
-    LEFT JOIN users u1 ON m.participant_id = u1.user_id
-    LEFT JOIN snapshots s ON m.snapshot_id = s.snapshot_id
-    LEFT JOIN assets a ON s.asset_id = a.asset_id
-    LEFT JOIN stickers st ON m.album_id = st.album_id AND m.name = st.name
-    LEFT JOIN users su ON m.shared_user_id = su.user_id
-    WHERE m.id = ?
-    """
-    private static let sqlQueryMessageSync = """
-    SELECT m.id, m.conversation_id, m.user_id, m.category, m.content, m.media_url, m.media_mime_type,
-        m.media_size, m.media_duration, m.media_width, m.media_height, m.media_hash, m.media_key,
-        m.media_digest, m.media_status, m.thumb_image, m.status, m.participant_id, m.snapshot_id, m.name,
-        m.album_id, m.created_at FROM messages m
-    INNER JOIN conversations c ON c.conversation_id = m.conversation_id AND c.status = 1
-    WHERE m.status = 'SENDING'
-    ORDER BY m.created_at ASC
-    """
-    private static let sqlQueryPendingMessages = """
-    SELECT m.id, m.conversation_id, m.user_id, m.category, m.content, m.media_url, m.media_mime_type,
-        m.media_size, m.media_duration, m.media_width, m.media_height, m.media_hash, m.media_key,
-        m.media_digest, m.media_status, m.thumb_image, m.status, m.participant_id, m.snapshot_id, m.name,
-        m.album_id, m.created_at FROM messages m
-    INNER JOIN conversations c ON c.conversation_id = m.conversation_id AND c.status = 1
-    WHERE m.status = 'SENDING' AND m.media_status = 'PENDING'
-    ORDER BY m.created_at ASC
-    """
+    static let sqlQueryFullMessageById = "\(sqlQueryMessageItem) WHERE m.id = ?"
+    static let sqlQueryQuoteMessageById = "\(sqlQueryMessageItem) WHERE m.id = ? AND m.status <> 'FAILED'"
+    private static let sqlQueryMessageSync = "\(sqlQueryMessage) WHERE m.status = 'SENDING' ORDER BY m.created_at ASC"
+    private static let sqlQueryPendingMessages = "\(sqlQueryMessage) WHERE m.status = 'SENDING' AND m.media_status = 'PENDING' ORDER BY m.created_at ASC"
 
     func findFailedMessages(conversationId: String, userId: String) -> [String] {
         return MixinDatabase.shared.getStringValues(column: Message.Properties.messageId.asColumnResult(), tableName: Message.tableName, condition: Message.Properties.conversationId == conversationId && Message.Properties.userId == userId && Message.Properties.status == MessageStatus.FAILED.rawValue, orderBy: [Message.Properties.createdAt.asOrder(by: .descending)], limit: 1000, inTransaction: false)
@@ -144,6 +97,10 @@ final class MessageDAO {
         }
         let change = ConversationChange(conversationId: conversationId, action: .updateMediaStatus(messageId: messageId, mediaStatus: mediaStatus))
         NotificationCenter.default.afterPostOnMain(name: .ConversationDidChange, object: change)
+    }
+
+    func updateMessageQuoteContent(quoteMessageId: String, quoteContent: String) {
+        MixinDatabase.shared.update(maps: [(Message.Properties.quoteContent, quoteContent)], tableName: Message.tableName, condition: Message.Properties.quoteMessageId == quoteContent)
     }
 
     func updateMessageContentAndStatus(content: String, status: String, messageId: String, conversationId: String) {
@@ -358,6 +315,11 @@ final class MessageDAO {
     }
 
     func insertMessage(message: Message, messageSource: String) {
+        var message = message
+        if let quoteMessageId = message.quoteMessageId, let quoteContent = getQuoteMessage(messageId: quoteMessageId) {
+            message.quoteContent = quoteContent
+        }
+
         MixinDatabase.shared.transaction { (db) in
             try insertMessage(database: db, message: message, messageSource: messageSource)
         }
@@ -394,6 +356,16 @@ final class MessageDAO {
             && Message.Properties.status == MessageStatus.DELIVERED.rawValue
             && Message.Properties.userId != AccountAPI.shared.accountUserId
         return MixinDatabase.shared.isExist(type: Message.self, condition: condition, inTransaction: false)
+    }
+
+    func getQuoteMessage(messageId: String?) -> String? {
+        guard let quoteMessageId = messageId, let quoteMessage: MessageItem = MixinDatabase.shared.getCodables(sql: MessageDAO.sqlQueryQuoteMessageById, values: [quoteMessageId], inTransaction: false).first else {
+            return nil
+        }
+        guard let encoder = try? JSONEncoder().encode(quoteMessage), let quoteContent = String(data: encoder, encoding: .utf8) else {
+            return nil
+        }
+        return quoteContent
     }
 
 }

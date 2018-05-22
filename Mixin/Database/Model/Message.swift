@@ -28,6 +28,8 @@ struct Message: BaseCodable {
     var name: String? = nil
     var albumId: String? = nil
     var sharedUserId: String? = nil
+    var quoteMessageId: String? = nil
+    var quoteContent: String? = nil
     var createdAt: String
 
     enum CodingKeys: String, CodingTableKey {
@@ -55,6 +57,8 @@ struct Message: BaseCodable {
         case name
         case albumId = "album_id"
         case sharedUserId = "shared_user_id"
+        case quoteMessageId = "quote_message_id"
+        case quoteContent = "quote_content"
         case createdAt = "created_at"
 
         static let objectRelationalMapping = TableBinding(CodingKeys.self)
@@ -80,41 +84,45 @@ struct Message: BaseCodable {
 
 extension Message {
 
+    static func createMessage(messageId: String, conversationId: String, userId: String, category: String, content: String? = nil, mediaUrl: String? = nil, mediaMimeType: String? = nil, mediaSize: Int64? = nil, mediaDuration: Int64? = nil, mediaWidth: Int? = nil, mediaHeight: Int? = nil, mediaHash: String? = nil, mediaKey: Data? = nil, mediaDigest: Data? = nil, mediaStatus: String? = nil, thumbImage: String? = nil, status: String, action: String? = nil, participantId: String? = nil, snapshotId: String? = nil, name: String? = nil, albumId: String? = nil, sharedUserId: String? = nil, quoteMessageId: String? = nil, quoteContent: String? = nil, createdAt: String) -> Message {
+        return Message(messageId: messageId, conversationId: conversationId, userId: userId, category: category, content: content, mediaUrl: mediaUrl, mediaMimeType: mediaMimeType, mediaSize: mediaSize, mediaDuration: mediaDuration, mediaWidth: mediaWidth, mediaHeight: mediaHeight, mediaHash: mediaHash, mediaKey: mediaKey, mediaDigest: mediaDigest, mediaStatus: mediaStatus, thumbImage: thumbImage, status: status, action: action, participantId: participantId, snapshotId: snapshotId, name: name, albumId: albumId, sharedUserId: sharedUserId, quoteMessageId: quoteMessageId, quoteContent: quoteContent, createdAt: createdAt)
+    }
+
     static func createMessage(snapshotMesssage snapshot: Snapshot, data: BlazeMessageData) -> Message {
-        return Message(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: nil, mediaUrl: nil, mediaMimeType: nil, mediaSize: nil, mediaDuration: nil, mediaWidth: nil, mediaHeight: nil, mediaHash: nil, mediaKey: nil, mediaDigest: nil, mediaStatus: nil, thumbImage: nil, status: MessageStatus.DELIVERED.rawValue, action: snapshot.type, participantId: nil, snapshotId: snapshot.snapshotId, name: nil, albumId: nil, sharedUserId: nil, createdAt: data.createdAt)
+        return createMessage(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, status: MessageStatus.DELIVERED.rawValue, action: snapshot.type, snapshotId: snapshot.snapshotId, createdAt: data.createdAt)
     }
 
     static func createMessage(textMessage plainText: String, data: BlazeMessageData) -> Message {
-        return Message(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: plainText, mediaUrl: nil, mediaMimeType: nil, mediaSize: nil, mediaDuration: nil, mediaWidth: nil, mediaHeight: nil, mediaHash: nil, mediaKey: nil, mediaDigest: nil, mediaStatus: nil, thumbImage: nil, status: MessageStatus.DELIVERED.rawValue, action: nil, participantId: nil, snapshotId: nil, name: nil, albumId: nil, sharedUserId: nil, createdAt: data.createdAt)
+        return createMessage(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: plainText, status: MessageStatus.DELIVERED.rawValue, createdAt: data.createdAt)
     }
 
     static func createMessage(systemMessage action: String?, participantId: String?, userId: String, data: BlazeMessageData) -> Message {
-        return Message(messageId: data.messageId, conversationId: data.conversationId, userId: userId, category: data.category, content: nil, mediaUrl: nil, mediaMimeType: nil, mediaSize: nil, mediaDuration: nil, mediaWidth: nil, mediaHeight: nil, mediaHash: nil, mediaKey: nil, mediaDigest: nil, mediaStatus: nil, thumbImage: nil, status: MessageStatus.READ.rawValue, action: action, participantId: participantId, snapshotId: nil, name: nil, albumId: nil, sharedUserId: nil, createdAt: data.createdAt)
+        return createMessage(messageId: data.messageId, conversationId: data.conversationId, userId: userId, category: data.category, status: MessageStatus.READ.rawValue, action: action, participantId: participantId, createdAt: data.createdAt)
     }
 
     static func createMessage(appMessage data: BlazeMessageData) -> Message {
-        return Message(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: data.data, mediaUrl: nil, mediaMimeType: nil, mediaSize: nil, mediaDuration: nil, mediaWidth: nil, mediaHeight: nil, mediaHash: nil, mediaKey: nil, mediaDigest: nil, mediaStatus: nil, thumbImage: nil, status: MessageStatus.DELIVERED.rawValue, action: nil, participantId: nil, snapshotId: nil, name: nil, albumId: nil, sharedUserId: nil, createdAt: data.createdAt)
+        return createMessage(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: data.data, status: MessageStatus.DELIVERED.rawValue, createdAt: data.createdAt)
     }
 
     static func createMessage(stickerData: TransferStickerData, data: BlazeMessageData) -> Message {
-        return Message(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: nil, mediaUrl: nil, mediaMimeType: nil, mediaSize: nil, mediaDuration: nil, mediaWidth: nil, mediaHeight: nil, mediaHash: nil, mediaKey: nil, mediaDigest: nil, mediaStatus: nil, thumbImage: nil, status: MessageStatus.DELIVERED.rawValue, action: nil, participantId: nil, snapshotId: nil, name: stickerData.name, albumId: stickerData.albumId, sharedUserId: nil, createdAt: data.createdAt)
+        return createMessage(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, status: MessageStatus.DELIVERED.rawValue, name: stickerData.name, albumId: stickerData.albumId, createdAt: data.createdAt)
     }
 
     static func createMessage(contactData: TransferContactData, data: BlazeMessageData) -> Message {
-        return Message(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: nil, mediaUrl: nil, mediaMimeType: nil, mediaSize: nil, mediaDuration: nil, mediaWidth: nil, mediaHeight: nil, mediaHash: nil, mediaKey: nil, mediaDigest: nil, mediaStatus: nil, thumbImage: nil, status: MessageStatus.DELIVERED.rawValue, action: nil, participantId: nil, snapshotId: nil, name: nil, albumId: nil, sharedUserId: contactData.userId, createdAt: data.createdAt)
+        return createMessage(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, status: MessageStatus.DELIVERED.rawValue, sharedUserId: contactData.userId, createdAt: data.createdAt)
     }
 
     static func createMessage(mediaData: TransferAttachmentData, data: BlazeMessageData) -> Message {
         let mediaStatus = data.category.hasSuffix("_DATA") ? MediaStatus.CANCELED.rawValue : MediaStatus.PENDING.rawValue
-        return Message(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: mediaData.attachmentId, mediaUrl: nil, mediaMimeType: mediaData.getMimeType(), mediaSize: mediaData.size, mediaDuration: nil, mediaWidth: mediaData.width, mediaHeight: mediaData.height, mediaHash: nil, mediaKey: mediaData.key, mediaDigest: mediaData.digest, mediaStatus: mediaStatus, thumbImage: mediaData.thumbnail, status: MessageStatus.DELIVERED.rawValue, action: nil, participantId: nil, snapshotId: nil, name: mediaData.name, albumId: nil, sharedUserId: nil, createdAt: data.createdAt)
+        return createMessage(messageId: data.messageId, conversationId: data.conversationId, userId: data.userId, category: data.category, content: mediaData.attachmentId, mediaMimeType: mediaData.getMimeType(), mediaSize: mediaData.size, mediaDuration: nil, mediaWidth: mediaData.width, mediaHeight: mediaData.height, mediaKey: mediaData.key, mediaDigest: mediaData.digest, mediaStatus: mediaStatus, thumbImage: mediaData.thumbnail, status: MessageStatus.DELIVERED.rawValue, name: mediaData.name, createdAt: data.createdAt)
     }
 
     static func createMessage(messageId: String = UUID().uuidString.lowercased(), category: String, conversationId: String, createdAt: String = Date().toUTCString(), userId: String) -> Message {
-        return Message(messageId: messageId, conversationId: conversationId, userId: userId, category: category, content: nil, mediaUrl: nil, mediaMimeType: nil, mediaSize: nil, mediaDuration: nil, mediaWidth: nil, mediaHeight: nil, mediaHash: nil, mediaKey: nil, mediaDigest: nil, mediaStatus: nil, thumbImage: nil, status: MessageStatus.SENDING.rawValue, action: nil, participantId: nil, snapshotId: nil, name: nil, albumId: nil, sharedUserId: nil, createdAt: createdAt)
+        return createMessage(messageId: messageId, conversationId: conversationId, userId: userId, category: category, status: MessageStatus.SENDING.rawValue, createdAt: createdAt)
     }
 
     static func createMessage(message: MessageItem) -> Message {
-        return Message(messageId: message.messageId, conversationId: message.conversationId, userId: message.userId, category: message.category, content: message.content, mediaUrl: message.mediaUrl, mediaMimeType: message.mediaMimeType, mediaSize: message.mediaSize, mediaDuration: message.mediaDuration, mediaWidth: message.mediaWidth, mediaHeight: message.mediaHeight, mediaHash: message.mediaHash, mediaKey: message.mediaKey, mediaDigest: message.mediaDigest, mediaStatus: message.mediaStatus, thumbImage: message.thumbImage, status: message.status, action: message.actionName, participantId: message.participantId, snapshotId: message.snapshotId, name: message.name, albumId: message.albumId, sharedUserId: nil, createdAt: message.createdAt)
+        return Message(messageId: message.messageId, conversationId: message.conversationId, userId: message.userId, category: message.category, content: message.content, mediaUrl: message.mediaUrl, mediaMimeType: message.mediaMimeType, mediaSize: message.mediaSize, mediaDuration: message.mediaDuration, mediaWidth: message.mediaWidth, mediaHeight: message.mediaHeight, mediaHash: message.mediaHash, mediaKey: message.mediaKey, mediaDigest: message.mediaDigest, mediaStatus: message.mediaStatus, thumbImage: message.thumbImage, status: message.status, action: message.actionName, participantId: message.participantId, snapshotId: message.snapshotId, name: message.name, albumId: message.albumId, sharedUserId: message.sharedUserId, quoteMessageId: message.quoteMessageId, quoteContent: message.quoteContent, createdAt: message.createdAt)
     }
 
 }

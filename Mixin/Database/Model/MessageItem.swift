@@ -54,6 +54,9 @@ class MessageItem: TableCodable {
     var sharedUserAppId: String = ""
     var sharedUserIsVerified: Bool = false
 
+    var quoteMessageId: String? = nil
+    var quoteContent: String? = nil
+
     var userIsBot: Bool {
         return !(appId?.isEmpty ?? true)
     }
@@ -135,6 +138,9 @@ class MessageItem: TableCodable {
         case sharedUserAvatarUrl
         case sharedUserAppId
         case sharedUserIsVerified
+
+        case quoteMessageId = "quote_message_id"
+        case quoteContent = "quote_content"
 
         static let objectRelationalMapping = TableBinding(CodingKeys.self)
     }
